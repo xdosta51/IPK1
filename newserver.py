@@ -5,7 +5,7 @@ import re
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Bind the socket to the port
-server_address = ('localhost',9000)
+server_address = ('localhost',8000)
 sock.bind(server_address)
 
 # Listen for incoming connections
@@ -13,7 +13,7 @@ sock.listen(1)
 
 while True:
     # Wait for a connection
-    connection = sock.accept()
+    connection, client_address = sock.accept()
     try:
         while True:
             data = connection.recv(1024)
@@ -50,6 +50,7 @@ while True:
                 else:
                     print('chyba')
                 if foundtype == 'A':
+
                     try:
                         socket.gethostbyname(found)
                         turbink = found + ':' + foundtype + '=' + socket.gethostbyname(found) + '\n'
@@ -57,8 +58,9 @@ while True:
                         turbink = '404 Not Found.\r\n\r\n'
                         
                 elif foundtype == 'PTR':
+                    
                     try:
-                        socket.gethostbyname(found)
+                        socket.gethostbyaddr(found)
                         picakurva = socket.gethostbyaddr(found)
                         turbink = found + ':' + foundtype + '=' + picakurva[0] + '\n'
                     except: 
