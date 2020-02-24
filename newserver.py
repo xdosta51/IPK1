@@ -5,7 +5,7 @@ import re
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Bind the socket to the port
-server_address = ('localhost',8000)
+server_address = ('localhost',9000)
 sock.bind(server_address)
 
 # Listen for incoming connections
@@ -40,6 +40,7 @@ while True:
                 
                 m = re.search('name=(.+?)&', datanew)
                 ipadr = re.search('name=(.+?) HTTP', datanew)
+                
                 if m:
                     found = m.group(1)
                     n = re.search('type=(.+?) ', datanew)
