@@ -2,11 +2,11 @@ import socket
 import re
 import sys
 
-if len(sys.argv) is not 2: # test na pocet argumentu
+if len(sys.argv) is not 2: 
     print("Spatne argumenty.")
     sys.exit(1)
 port_arg = int(sys.argv[1])
-if not isinstance(port_arg,int) or port_arg < 1024 or port_arg > 65535: # test na port_arg
+if not isinstance(port_arg,int) or port_arg < 1024 or port_arg > 65535:
     print("Spatne cislo portu nebo spatny format cisla portu")
     sys.exit(1)
 
@@ -33,6 +33,7 @@ while True:
             gethttp = gethttp.split('\n', 1)
             lajna = gethttp[0]
             words = lajna.split()
+            
             if words[-1] == 'HTTP/1.1' or words[-1] == 'HTTP/1.0':
                 version = words[-1] + ' '
             else:
@@ -42,7 +43,7 @@ while True:
                 break
             
             itisok = re.search('/resolve\\?', datanew)
-            itisturbo = re.search('/dns-query\s', datanew)
+            itisturbo = re.search('/dns-query', datanew)
             if not (itisok) and not (itisturbo):
                 messageforclient = version + '400 Bad Request\r\n\r\n'
                 messageforclient = messageforclient.encode()
@@ -77,37 +78,51 @@ while True:
                     connection.sendall(messageforclient)
                     break
                 if foundtype == 'A':
-
-                    try:
-                        socket.gethostbyname(found)
-                        zpravaproklienta = found + ':' + foundtype + '=' + socket.gethostbyname(found) + '\n'
-                    except: 
-                        zpravaproklienta = version + '404 Not Found.\r\n\r\n'
+                    isfound = re.match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$', found)
+                    if isfound:
+                        zpravaproklienta = version + '400 Bad Request\r\n\r\n'
+                    else:
+                        try:
+                            socket.gethostbyname(found)
+                            zpravaproklienta = found + ':' + foundtype + '=' + socket.gethostbyname(found) + '\n'
+                        except: 
+                            zpravaproklienta = version + '404 Not Found.\r\n\r\n'
                         
                 elif foundtype == 'PTR':
-                    
-                    try:
-                        socket.gethostbyaddr(found)
-                        getnamee = socket.gethostbyaddr(found)
-                        zpravaproklienta = found + ':' + foundtype + '=' + getnamee[0] + '\n'
-                    except: 
-                        zpravaproklienta = version + '404 Not Found.\r\n\r\n'
+                    isfound = re.match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$', found)
+                    if not isfound:
+                        zpravaproklienta = version + '400 Bad Request\r\n\r\n'
+                    else:
+                        try:
+                            socket.gethostbyaddr(found)
+                            getnamee = socket.gethostbyaddr(found)
+                            zpravaproklienta = found + ':' + foundtype + '=' + getnamee[0] + '\n'
+                        except: 
+                            zpravaproklienta = version + '404 Not Found.\r\n\r\n'
                         
-                if not zpravaproklienta == version + '404 Not Found.\r\n\r\n':
+                        
+                if not zpravaproklienta == version + '404 Not Found.\r\n\r\n' and not zpravaproklienta == version + '400 Bad Request\r\n\r\n':
                     messageforclient = version + '200 OK\r\n\r\n' + zpravaproklienta
+                
                 else:
                     messageforclient = zpravaproklienta
                 messageforclient = messageforclient.encode()
             elif itispost:
         
                 groupof = datanew.split('\r\n\r\n', 1)
+                
+                test = groupof[1].split('\r\n')
+                
                 groupof = groupof[1].split('\n')
+               
                 counter = len(groupof)
                 messageforclient = ''
                 hlavicka = ''
                 for addr in groupof:
+                    addr = addr.replace(' ', '')
+                    addr = addr.replace('\t', '')
+                    typeof = re.search(':(.+?)$', addr)
                     
-                    typeof = re.search(':(.+?)', addr)
                     if typeof:
                         typeof = typeof.group(1)
                     else:
@@ -128,23 +143,36 @@ while True:
                             continue
                         
                     if typeof == 'A':
-                        try:
-                            messageforclient = messageforclient + messagetok  + socket.gethostbyname(addr) + '\n'
-                        except:
-                            hlavicka = version + '404 Not Found.\r\n\r\n'
+                        isaddr = re.match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$', addr)
+                        if isaddr:
+                            hlavicka = version + '400 Bad Request\r\n\r\n'
+                        else:
+                            try:
+                                messageforclient = messageforclient + messagetok  + socket.gethostbyname(addr) + '\n'
+                            except:
+                                hlavicka = version + '200 OK\r\n\r\n'
+                            
                     elif typeof == 'P':
-                        try:
-                            getnamee = socket.gethostbyaddr(addr)
-                            messageforclient = messageforclient + messagetok + getnamee[0] +'\n'
-                        except:
-                            hlavicka = version + '404 Not Found.\r\n\r\n'
+                        isaddr = re.match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$', addr)
+                        if not isaddr:
+                            hlavicka = version + '400 Bad Request\r\n\r\n'
+                        else:
+                            try:
+                                getnamee = socket.gethostbyaddr(addr)
+                                messageforclient = messageforclient + messagetok + getnamee[0] +'\n'
+                            except:
+                                hlavicka = version + '200 OK\r\n\r\n'
+                    
                         
                     else:   
                         continue
                 if not hlavicka:
                     hlavicka = version + '200 OK\r\n\r\n'
+                if not messageforclient:
+                    hlavicka = version + '404 Not Found\r\n\r\n'
                 messageforclient = hlavicka + messageforclient
                 messageforclient = messageforclient.encode()
+
             else :
                 messageforclient = version + '400 Bad Request\r\n\r\n'
                 messageforclient = messageforclient.encode()
