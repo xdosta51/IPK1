@@ -1,5 +1,5 @@
 www.fit.vutbr.cz:A
 www.google.com:A
 www.seznam.cz:A
-147.229.14.131:PTR
+147.229.14.1314:PTR
 ihned.cz:A
