@@ -162,5 +162,8 @@ while True:
                 connection.close()
         except: pass
         break
+    finally:
+        if connection:
+            connection.close()
 sock.shutdown
 sock.close()
